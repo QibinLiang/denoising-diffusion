@@ -1,0 +1,33 @@
+task: mnist
+lr: 0.003
+epochs: 20
+batch_size: 512
+ckpt: ckpt/ddpm_mnist/
+save_interval: 5000
+log_interval: 100
+log_file: logs/ddpm_mnist/
+
+ddpm:
+  feat_dim: [1,28,28]
+  emb_dim: 784
+  T: 1000
+unet:
+  out_dim: 1
+  layer_out_dim: 64
+  down:
+    in_channels:
+      - [1, 64]
+      - [64, 128]
+    out_channels:
+      - [64, 64]
+      - [128, 128]
+  up:
+    in_channels:
+      - [256, 128]
+      - [128, 64]
+    out_channels:
+      - [128, 128]
+      - [64, 64]
+  bottle_neck:
+    in_channels: [128, 256]
+    out_channels: [256, 256]
