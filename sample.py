@@ -12,6 +12,8 @@ model = tr.load("ckpt/ddpm_mnist/model.pt")
 model.set_device(device)
 model.to(device)
 
+n_frames = 80
+
 model.eval()
 with tr.no_grad():
     # todo : support modifying the image grid
@@ -26,22 +28,23 @@ with tr.no_grad():
     sample = (sample.permute(1,2,0).detach().cpu().numpy() * 255).astype(np.int32)
     im = plt.imshow(sample,cmap='gray')
     def update(frame):            
-        if frame >399:
+        if frame >int(n_frames*0.8):
             sample = samples[-1]
             sample = make_grid(sample, 5)
             img = sample.permute(1,2,0).detach().cpu().numpy()
             img = (img * 255).astype(np.int32)
             img = np.clip(img, a_min=0, a_max=255)
-            if frame == 459:
+            if frame == (n_frames-1):
                 plt.savefig('asset/final.png')
             return [im.set_array(img)]
         else:
-            sample = samples[-400+frame]
+            interval = T // int(n_frames*0.8)
+            sample = samples[frame * interval]
             sample = make_grid(sample, 5)
             img = sample.permute(1,2,0).detach().cpu().numpy()
             img = (img * 255).astype(np.int32)
             img = np.clip(img, a_min=0, a_max=255)
             return [im.set_array(img)]
     # todo : support customizing the number of frame and the start frame
-    anim = animation.FuncAnimation(fig, update, frames=460,interval=20)
+    anim = animation.FuncAnimation(fig, update, frames=n_frames,interval=20)
     anim.save("asset/anime.gif")
