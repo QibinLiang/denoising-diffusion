@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+# vscode
+.vscode
+
+checkpoints
+log
+tensorboard
+
 # Distribution / packaging
 .Python
 build/
