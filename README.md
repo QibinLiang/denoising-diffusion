@@ -7,7 +7,7 @@ This repo implements the Denoising Diffusion Probabilistic Model(DDPM) on the MN
 
 Train
 ```bash
-python train_ddpm.py --config configs/mnist_ddpm.yaml --task mnist
+python train_ddpm.py --config config/ddpm_mnist.yaml --task mnist
 ```
 
 Inference
