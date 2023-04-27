@@ -151,14 +151,28 @@ class UNet(nn.Module):
     """
     def __init__(self, config: Dict) -> None:
         super().__init__()
-
+        use_time_emb = config['use_time_emb']
         self.down = Down(config['down'])
         self.up = Up(config['up'])
         self.bottle_neck = BottleNeck(config['bottle_neck'])
         self.class_conv = nn.Conv2d(config['layer_out_dim'], config['out_dim'], 1, 1)
+        if use_time_emb:
+            feat_dim = config['feat_dim']
+            emb_dim = config['emb_dim']
+            bn_inchnnels = config['bottle_neck']['in_channels']
+            n_layers = len(bn_inchnnels)
+            n_chnnel = bn_inchnnels[0]
+            w = h = feat_dim[-1] // (2 ** n_layers)
+            self.bottle_neck_shape = (n_chnnel, w, h)
+           
+            self.bottle_neck_emb_proj = tr.nn.Linear(emb_dim, n_chnnel * w * h)
+            self.bottle_nect_norm = tr.nn.BatchNorm2d(n_chnnel)
     
-    def forward(self, x):
+    def forward(self, x, t=None):
         x, xs = self.down(x)
+        if t is not None:
+            x += self.bottle_neck_emb_proj(self.self_emb(t)).reshape(self.bottle_neck)
+            x = self.bottle_nect_norm(x)
         x = self.bottle_neck(x)
         x = self.up(x, xs)
         x = self.class_conv(x)

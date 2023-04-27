@@ -6,7 +6,7 @@ from functools import partial
 from models.diffusion import DDPM
 from argparse import ArgumentParser
 from torch.utils.data import DataLoader
-from utils import mnist_datautils, mock_datautils
+from utils import mnist_datautils, cifar10_datautils
 import tensorboardX as tbx
 
 import torch.distributed as dist
@@ -27,7 +27,7 @@ def get_args():
     parser.add_argument('--config', type=str, help='The path of config file', required=True)
     parser.add_argument('--task', type=str, default='mnist',
                         help='The dataset used to train the diffusion model'
-                             '(option: \'mnist\', \'moons\', \'curve\')')
+                             '(option: \'mnist\',\'cifar10\')')
     parser.add_argument('--ddp', action='store_true', help='Whether to use distributed training')
     parser.add_argument('--init_method', type=str, default='tcp://')
     parser.add_argument('--rank', type=int, default=0, help='The rank of the process')
@@ -35,7 +35,7 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def train(dataloader:DataLoader, model:DDPM, optimizer:tr.optim.Optimizer, config:Dict, logger=None,device=None, ddp=False):
+def train(dataloader:DataLoader, model:DDPM, optimizer:tr.optim.Optimizer, config:Dict, logger=None,device=None, ddp=False, rank=0):
     
     writer = tbx.SummaryWriter(f"tensorboard/{config['task']}")
     log_interval = config['log_interval']
@@ -48,7 +48,10 @@ def train(dataloader:DataLoader, model:DDPM, optimizer:tr.optim.Optimizer, confi
         device = tr.device("cpu")
     steps = 0
     cum_loss = 0
-    model.set_device(device)
+    if ddp:
+        model.module.set_device(device)
+    else:
+        model.set_device(device)
 
     for e in range(config['epochs']):
         for _, item in enumerate(dataloader):
@@ -75,7 +78,7 @@ def train(dataloader:DataLoader, model:DDPM, optimizer:tr.optim.Optimizer, confi
             steps += 1
             
             # log 
-            if steps % log_interval == (log_interval-1):
+            if steps % log_interval == (log_interval-1) and rank == 0:
                 if logger == None:
                     print(f"epochs:{e}, steps:{steps}, loss:{cum_loss/ log_interval:.4f}")
                 else:
@@ -84,25 +87,23 @@ def train(dataloader:DataLoader, model:DDPM, optimizer:tr.optim.Optimizer, confi
                 cum_loss = 0
 
             # save checkpoint
-            if steps % save_interval ==save_interval-1:
+            if steps % save_interval ==save_interval-1 and rank == 0:
                 if ddp:
                     tr.save(model.module, os.path.join(ckpt_path,"model.pt".format(steps)))
                 else:
                     tr.save(model, os.path.join(ckpt_path,"model.pt".format(steps)))
 
-    if ddp:
+    if ddp and rank==0:
         tr.save(model.module, os.path.join(ckpt_path,"final.pt"))
     else:
         tr.save(model, os.path.join(ckpt_path,"final.pt"))
 
 def select_dataset(task, is_ddp=False):
-    assert task in ['mnist', 'moons', 'curve'], '{} is not supported'.format(task)
+    assert task in ['mnist', 'cifar10'], '{} is not supported'.format(task)
     if task == 'mnist':
         return partial(mnist_datautils.get_dataloader, path='data', ddp=is_ddp)
-    elif task == 'moons':
-        return partial(mock_datautils.get_dataloader, task='moons')
-    elif task == 'curve':
-        return partial(mock_datautils.get_dataloader, task='curve')
+    elif task == 'cifar10':
+        return partial(cifar10_datautils.get_dataloader, path='data', ddp=is_ddp)
 
 def main():
     # init logger
@@ -120,7 +121,7 @@ def main():
         model = DDPM(config)
         model = model.to(device)
         model = DDP(model, find_unused_parameters=True)
-        dataloader = select_dataset(args.task)(batch_size=config['batch_size'], )
+        dataloader = select_dataset(args.task)(batch_size=config['batch_size'], ddp=True)
     else:
         device = tr.device("cuda:0")
         model = DDPM(config)
@@ -128,7 +129,7 @@ def main():
         dataloader = select_dataset(args.task)(batch_size=config['batch_size'])
     optimizer = tr.optim.Adam(model.parameters(), lr=lr)
     logger.info("start training")
-    train(dataloader, model, optimizer,config=config, logger=logger, device=device)
+    train(dataloader, model, optimizer,config=config, logger=logger, device=device, ddp=is_ddp, rank=args.rank)
     logger.info("finish training")
 
 if __name__ == "__main__":

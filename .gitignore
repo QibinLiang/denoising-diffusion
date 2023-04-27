@@ -12,6 +12,7 @@ __pycache__/
 checkpoints
 log
 tensorboard
+data
 
 # Distribution / packaging
 .Python

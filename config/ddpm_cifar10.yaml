@@ -1,0 +1,49 @@
+task: cifar10
+lr: 0.0003
+epochs: 100
+batch_size: 256
+ckpt: ckpt/ddpm_cifar10/
+save_interval: 5000
+log_interval: 100
+log_file: logs/ddpm_cifar10/
+
+ddpm:
+  feat_dim: [3,32,32]
+  emb_dim: 512
+  T: 1000
+
+unet:
+  use_time_emb: true
+  feat_dim: [3,32,32]
+  emb_dim: 512
+  
+  out_dim: 3
+  layer_out_dim: 64
+  down:
+    use_time_emb: true
+    feat_dim: [3,32,32]
+    emb_dim: 512
+    in_channels:
+      - [6, 64]
+      - [64, 128]
+      - [128, 256]
+    out_channels:
+      - [64, 64]
+      - [128, 128]
+      - [256, 256]
+  up:
+    use_time_emb: true
+    in_channels:
+      - [512, 256]
+      - [256, 128]
+      - [128, 64]
+    out_channels:
+      - [256, 256]
+      - [128, 128]
+      - [64, 64]
+  bottle_neck:
+    use_time_emb: true
+    feat_dim: [3,32,32]
+    emb_dim: 512
+    in_channels: [512, 512]
+    out_channels: [512, 512]

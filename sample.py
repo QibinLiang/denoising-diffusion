@@ -1,6 +1,8 @@
 import torch as tr
 import numpy as np
 import matplotlib.pyplot as plt
+import utils.utils as utils
+from models.diffusion import DDPM
 import matplotlib.animation as animation
 from torchvision.utils import make_grid
 
@@ -8,7 +10,9 @@ from torchvision.utils import make_grid
 # todo : add argparser
 T = 1000
 device = tr.device("cuda:0")
-model = tr.load("ckpt/ddpm_mnist/model.pt")
+model = DDPM(utils.load_config('config/ddpm_cifar10.yaml'))
+#model.load_state_dict(tr.load("ckpt/ddpm_cifar10/final.pt", map_location=tr.device('cuda:0')))
+model = tr.load("ckpt/ddpm_cifar10/final.pt", map_location=tr.device('cuda:0'))
 model.set_device(device)
 model.to(device)
 

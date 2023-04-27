@@ -1,6 +1,6 @@
 import torch as tr
 from typing import Dict
-from models.unet import UNet
+from models.unet_2 import UNet
 
 
 class DDPM(tr.nn.Module):
@@ -48,9 +48,7 @@ class DDPM(tr.nn.Module):
 
     def compute_epsilon_theta(self, x_t, t):
         noise = self.emb1(t)
-        noise = noise.view(x_t.shape)
-        out = self.unet(x_t)
-        out = out + noise
+        out = self.unet(x_t, noise)
         return out
     
     def set_device(self, device):
