@@ -13,7 +13,7 @@ checkpoints
 log
 tensorboard
 data
-
+*.pt
 # Distribution / packaging
 .Python
 build/
